@@ -1,530 +1,296 @@
-# Deepfake & Synthetic Image Detection Thesis
+# Deepfake and Synthetic-Image Detection via Handcrafted Features
 
-A comprehensive machine learning framework for detecting deepfakes and AI-generated synthetic images using handcrafted features and machine learning classifiers. This thesis investigates the effectiveness of traditional computer vision features in distinguishing authentic images from manipulated content and synthetic images.
+**B.Sc. Thesis — Babeș-Bolyai University**
+**Author:** Andrei Piscoran
 
-**Status:** Active Development | **Date:** 2026
-
----
-
-## 🎯 Project Overview
-
-This thesis explores the detection of deepfakes and synthetic images through feature-based analysis. The project combines:
-
-- **Handcrafted Feature Extraction**: DCT, intensity analysis, color features, texture descriptors, wavelet transforms, noise profiles, and FFT analysis
-- **Multi-Dataset Support**: Integration with CIFAKE and FaceForensics++ datasets
-- **Machine Learning Classification**: Linear Discriminant Analysis and ensemble methods for binary classification (Real vs. Fake/Synthetic)
-- **Cross-Dataset Evaluation**: Benchmark results across different dataset combinations
-- **Interactive Web UI**: Streamlit-based visualization and analysis dashboard
-
-The goal is to determine whether traditional computer vision features can effectively identify deepfakes and AI-generated images, and how well models transfer across different datasets.
+A reproducible machine-learning framework for detecting deepfakes and
+AI-generated synthetic images from handcrafted computer-vision features. The
+work investigates whether traditional, interpretable feature descriptors —
+rather than end-to-end deep networks — can reliably distinguish authentic images
+from manipulated or fully synthetic content, and how well such detectors
+generalise across datasets.
 
 ---
 
-## 📂 Project Structure
+## Abstract
+
+Deep generative models have made synthetic and manipulated imagery increasingly
+difficult to identify by eye, motivating automated forensic detection. This
+thesis studies the discriminative power of seven handcrafted feature families —
+DCT, intensity, colour, texture, wavelet, noise-residue, and FFT descriptors —
+across two complementary datasets: CIFAKE (fully synthetic vs. natural images)
+and FaceForensics++ (manipulated vs. authentic face video frames). The framework
+provides feature extraction, statistical separability analysis, linear and LDA
+classification, and cross-dataset transfer evaluation. A lightweight linear
+model over noise and texture features attains 87.1% accuracy and 0.943 ROC-AUC
+on CIFAKE at negligible computational cost, but transfer to FaceForensics++
+collapses to near-chance — quantifying both the promise and the principal
+limitation of handcrafted-feature detection. Empirical results are summarised in
+[`RESULTS.md`](RESULTS.md).
+
+---
+
+## Research Questions
+
+The thesis addresses six questions:
+
+1. How effectively do handcrafted features separate real from synthetic or
+   manipulated images?
+2. What inherent distributional differences exist between the CIFAKE and
+   FaceForensics++ datasets?
+3. Do models trained on one dataset generalise to another?
+4. Which feature families are most discriminative, and for which manipulation
+   type?
+5. How do the extraction methods scale with dataset size?
+6. How robust are the features to compression and quality variation?
+
+---
+
+## Feature Families
+
+The framework extracts seven categories of descriptors from each image:
+
+| Family | Description |
+|--------|-------------|
+| **DCT** | Discrete Cosine Transform coefficients capturing frequency-domain and compression artifacts. |
+| **Intensity** | Histogram statistics, entropy, and luminance distribution measures. |
+| **Colour** | RGB channel statistics and correlations, HSV/YCbCr conversions, chroma-subsampling cues. |
+| **Texture** | Local Binary Patterns (LBP), Gray-Level Co-occurrence Matrix (GLCM), Gabor responses, edge/gradient statistics. |
+| **Wavelet** | Multi-scale wavelet decomposition and per-band energy distribution. |
+| **Noise** | Laplacian variance, noise-floor estimation, and high-frequency residue profiles. |
+| **FFT** | Radial frequency spectrum with magnitude and phase distribution for anomaly detection. |
+
+---
+
+## Datasets
+
+**CIFAKE.** Authentic photographs paired with images produced by generative
+models, organised as `data/{train,test}/{REAL,FAKE}`. Used at full scale
+(120,000 samples) for the principal classification experiments.
+
+**FaceForensics++ (FF++).** Authentic face recordings alongside deepfakes
+produced via Face2Face, FaceSwap, NeuralTextures, and related techniques. Videos
+are converted to frames and split automatically; the dataset can be fetched
+through KaggleHub.
+
+---
+
+## Project Structure
 
 ```
-Bsc/
-├── feature_benchmark/          # Main feature extraction and analysis pipeline
-│   ├── main.py                # CLI entrypoint for analysis
-│   ├── analyzer.py            # Core CIFAKEAnalyzer class for feature analysis
-│   ├── feature_extractor.py   # Handcrafted feature extraction implementations
-│   ├── dataset.py             # Dataset loading (CIFAKE, FaceForensics++)
-│   ├── train.py               # Model training and evaluation pipeline
-│   ├── extract_ffpp_frames.py # Convert FaceForensics++ videos to frames
-│   ├── test_integration.py    # Integration tests for dataset support
-│   ├── test_faceforensicspp.py # Dedicated FaceForensics++ benchmark
-│   ├── FACEFORENSICS_INTEGRATION.md # FF++ integration documentation
-│   │
-│   ├── cifake_analysis/       # Generated analysis reports and features
-│   │   ├── *_analysis_report_*.md    # Feature analysis reports
-│   │   ├── cross_dataset_*.md        # Cross-dataset evaluation results
-│   │   └── *_features_*.npz         # Precomputed feature files
-│   │
-│   ├── cifake_data/           # CIFAKE dataset (train/test split)
-│   ├── ff_data/               # FaceForensics++ dataset (processed images)
-│   └── test_output/           # Temporary test outputs
+bsc/
+├── feature_benchmark/              # Feature extraction and analysis pipeline
+│   ├── main.py                     # CLI entrypoint for analysis
+│   ├── analyzer.py                 # Core analyzer: extraction, statistics, reporting
+│   ├── feature_extractor.py        # Handcrafted feature implementations
+│   ├── dataset.py                  # Dataset loading (CIFAKE, FaceForensics++)
+│   ├── train.py                    # Training and evaluation pipeline
+│   ├── extract_ffpp_frames.py      # FaceForensics++ video → frame conversion
+│   ├── test_integration.py         # Dataset-support integration tests
+│   ├── test_faceforensicspp.py     # FaceForensics++ benchmark
+│   ├── FACEFORENSICS_INTEGRATION.md
+│   └── cifake_analysis/            # Generated reports, metrics, and feature archives
 │
-└── UI/                         # Interactive Streamlit web application
-    └── deepfake_thesis_app/   # Main Streamlit app
-        ├── app.py
-        ├── requirements.txt
-        └── docs/
+├── UI/deepfake_thesis_app/         # Streamlit analysis dashboard
+├── RESULTS.md                      # Summary of experimental findings
+└── README.md
 ```
 
 ---
 
-## 🔬 Feature Types
+## Installation
 
-The framework extracts **7 distinct feature categories** from images:
+**Prerequisites:** Python 3.8+, `pip`, and (optionally) a Kaggle API key for
+FaceForensics++ auto-download.
 
-### 1. **DCT Features** (Discrete Cosine Transform)
-- Captures frequency domain characteristics
-- Separates natural vs. compressed artifacts
-- Detects compression patterns in deepfakes
+```bash
+git clone <repo-url>
+cd bsc
+python -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-### 2. **Intensity Features**
-- Histogram-based statistics
-- Entropy and spread measurements
-- Luminance distribution analysis
-
-### 3. **Color Features**
-- RGB channel statistics and correlations
-- Color space conversions (HSV, YCbCr)
-- Chroma subsampling artifacts
-
-### 4. **Texture Features**
-- Local Binary Pattern (LBP) histograms
-- Gray-Level Co-occurrence Matrix (GLCM)
-- Gabor filter responses
-- Edge and gradient statistics
-
-### 5. **Wavelet Features**
-- Multi-scale wavelet decomposition
-- Energy distribution across frequency bands
-- Temporal consistency in wavelets
-
-### 6. **Noise Features**
-- Laplacian variance (Kurtosis)
-- Noise floor estimation
-- High-frequency noise profile analysis
-
-### 7. **FFT Features**
-- Radial frequency spectrum
-- Magnitude and phase distribution
-- Frequency domain anomaly detection
+For FaceForensics++ auto-download, place `kaggle.json` in `~/.kaggle/` and run
+`chmod 600 ~/.kaggle/kaggle.json`.
 
 ---
 
-## 📊 Datasets
+## Usage
 
-### CIFAKE Dataset
-- **Real Images**: Authentic photographs
-- **AI-Generated Images**: Produced by various AI generative models
-- **Size**: Thousands of labeled train/test samples
-- **Layout**: `data/train/{REAL,FAKE}` and `data/test/{REAL,FAKE}`
+**Interactive CLI analysis**
 
-### FaceForensics++ (FF++)
-- **Real Videos**: Authentic face recordings
-- **Deepfake Videos**: Generated using techniques like Face2Face, FaceSwap, NeuralTextures, DeepFaceLab
-- **Auto-Download**: KaggleHub integration for automatic dataset fetching
-- **Processing**: Automatic frame extraction and train/test splitting
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Python 3.8+**
-- **pip** or **conda**
-- **Kaggle API** (for FaceForensics++ auto-download)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repo-url>
-   cd Bsc
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure Kaggle (optional, for FaceForensics++ auto-download):**
-   ```bash
-   # Place your kaggle.json in ~/.kaggle/kaggle.json
-   chmod 600 ~/.kaggle/kaggle.json
-   ```
-
-### Quick Start
-
-#### Option 1: Interactive CLI Analysis
 ```bash
 cd feature_benchmark
 python main.py
 ```
 
-You'll be prompted to:
-- Select a dataset (CIFAKE or FaceForensics++)
-- Provide the dataset path (or enable auto-download for FF++)
-- Choose analysis parameters
+**Direct CIFAKE analysis**
 
-#### Option 2: Direct CIFAKE Analysis
 ```bash
-cd feature_benchmark
 python main.py --dataset cifake --data-dir ./cifake_data --samples 5000
 ```
 
-#### Option 3: FaceForensics++ Benchmark
+**FaceForensics++ benchmark**
+
 ```bash
-cd feature_benchmark
 python test_faceforensicspp.py --samples 2000 --split test --auto-download
 ```
 
-#### Option 4: Training & Evaluation
+**Training and evaluation**
+
 ```bash
-cd feature_benchmark
 python train.py --dataset cifake --data-dir ./cifake_data --train-split 0.8 --val-split 0.1
 ```
 
-#### Option 5: Interactive Web UI
+**Interactive dashboard**
+
 ```bash
 cd UI/deepfake_thesis_app
-streamlit run app.py
-```
-
-Access the dashboard at `http://localhost:8501`
-
----
-
-## 📈 Workflow
-
-### Feature Extraction Pipeline
-```
-Raw Images → Preprocessing → Feature Extraction → Feature Vectors
-                                     ↓
-                        [7 Feature Categories]
-                        ↓
-                   Vectorized Output (NPZ)
-```
-
-### Analysis & Classification
-```
-Feature Vectors → Statistical Analysis → Model Training → Evaluation Metrics
-                        ↓                        ↓            ↓
-              Correlation Analysis    LDA Classifier    Accuracy, AUC, ROC
-              PCA Analysis            Ensemble Methods   Confusion Matrices
-              Feature Importance      Cross-Validation   Cross-Dataset Transfer
-```
-
-### Output
-- **Reports**: Markdown analysis reports with statistics
-- **Visualizations**: Feature distributions, ROC curves, confusion matrices
-- **Features**: Compressed NPZ files for further analysis
-- **Models**: Trained classifiers for deployment
-
----
-
-## 🔧 Key Modules
-
-### `analyzer.py` - CIFAKEAnalyzer
-Main analysis engine supporting multi-dataset feature extraction and classification.
-
-**Key methods:**
-- `load_dataset()`: Load CIFAKE or FaceForensics++ dataset
-- `extract_advanced_features()`: Generate all 7 feature types
-- `extract_pca_features()`: Dimensionality reduction
-- `compute_feature_statistics()`: Statistical analysis
-- `analyze()`: Full pipeline execution
-- `generate_report()`: Create markdown analysis report
-
-**Parameters:**
-- `dataset_name`: "cifake" or "faceforensics++"
-- `auto_download_kaggle`: Enable KaggleHub auto-download
-- `num_samples`: Maximum images to process
-- `batch_size`: Processing batch size
-
-### `feature_extractor.py` - EnhancedFeatureExtractor
-Implements all feature extraction methods with parallel processing support.
-
-**Feature categories:**
-- DCT-based frequency analysis
-- Statistical intensity measurements
-- Color channel analysis
-- Texture descriptors (LBP, GLCM, Gabor)
-- Multi-scale wavelet decomposition
-- Noise characteristics
-- FFT spectral analysis
-
-### `dataset.py` - Dataset Handling
-Supports multiple dataset formats with automatic label inference.
-
-**Key functions:**
-- `download_faceforensicspp_dataset()`: KaggleHub auto-download
-- `CIFAKEImageDataset`: PyTorch dataset class with train/test split support
-- Automatic label inference from directory structure
-
-### `train.py` - Training Pipeline
-End-to-end training and evaluation framework.
-
-**Capabilities:**
-- Feature extraction with multiple workers
-- Model training with cross-validation
-- Hyperparameter optimization
-- Cross-dataset evaluation
-- Performance metric computation
-
----
-
-## 📊 Analysis Examples
-
-### Generate CIFAKE Feature Analysis
-```python
-from analyzer import CIFAKEAnalyzer
-
-analyzer = CIFAKEAnalyzer(
-    data_dir="./cifake_data",
-    dataset_name="cifake",
-    num_samples=5000
-)
-analyzer.analyze()
-```
-
-**Outputs:**
-- `cifake_analysis_report_*.md` - Detailed feature statistics
-- `cifake_features_*.npz` - Feature vectors for each category
-- `cifake_features_all_enhanced.npz` - Combined features
-
-### Cross-Dataset Evaluation
-```python
-from analyzer import CIFAKEAnalyzer
-
-# Train on CIFAKE
-cifake = CIFAKEAnalyzer(dataset_name="cifake", num_samples=5000)
-cifake.analyze()
-
-# Evaluate on FaceForensics++
-ffpp = CIFAKEAnalyzer(
-    dataset_name="faceforensics++",
-    auto_download_kaggle=True,
-    num_samples=2000
-)
-ffpp.analyze()
+streamlit run app.py            # http://localhost:8501
 ```
 
 ---
 
-## 📝 Available Scripts
+## Methodology and Pipeline
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `main.py` | Interactive CLI for feature analysis | `python main.py` |
-| `train.py` | Model training & evaluation | `python train.py --dataset cifake` |
-| `test_integration.py` | Validate dataset support | `python test_integration.py` |
-| `test_faceforensicspp.py` | FF++ benchmarking | `python test_faceforensicspp.py --samples 2000` |
-| `extract_ffpp_frames.py` | Convert FF++ videos to images | Direct API or via analyzer |
-| `QUICKSTART.py` | Quick example notebook | `python QUICKSTART.py` |
+Feature extraction proceeds from raw images through preprocessing to vectorised
+feature archives:
+
+```
+Raw images → preprocessing → feature extraction (7 families) → feature vectors (.npz)
+```
+
+Analysis and classification then apply statistical separability testing,
+dimensionality reduction, model training, and evaluation:
+
+```
+Feature vectors → statistical analysis → model training → evaluation
+   • KS / Hotelling T² tests   • LDA, logistic regression   • Accuracy, ROC-AUC
+   • covariance / KL divergence • 5-fold cross-validation    • confusion matrices
+   • feature ranking            • cross-dataset transfer      • transfer metrics
+```
+
+Every run produces a timestamped Markdown report, compressed feature archives
+(`*.npz`), and visualisations (distributions, ROC curves, confusion matrices).
 
 ---
 
-## 📋 Command-Line Options
+## Core Modules
 
-### `main.py`
-```bash
-python main.py [OPTIONS]
-  --dataset           Dataset name (cifake/faceforensics++)
-  --data-dir          Path to dataset directory
-  --output-dir        Output directory for results
-  --samples           Maximum number of samples to process
-  --batch-size        Batch size for processing
-  --auto-download     Enable auto-download for FaceForensics++
+**`analyzer.py`** — the analysis engine. Loads either dataset, extracts all
+seven feature families, computes feature statistics, runs PCA, executes the full
+pipeline, and emits a Markdown report. Key parameters: `dataset_name`
+(`cifake` / `faceforensics++`), `auto_download_kaggle`, `num_samples`,
+`batch_size`.
+
+**`feature_extractor.py`** — implements all feature methods with parallel
+processing support across the seven families described above.
+
+**`dataset.py`** — dataset handling with automatic label inference from
+directory structure, a PyTorch dataset class with train/test splitting, and
+KaggleHub-based FaceForensics++ download.
+
+**`train.py`** — end-to-end training and evaluation, including multi-worker
+feature extraction, cross-validation, hyperparameter search, and cross-dataset
+evaluation.
+
+---
+
+## Command-Line Reference
+
+`main.py`
+
+```
+--dataset        Dataset name (cifake / faceforensics++)
+--data-dir       Path to dataset directory
+--output-dir     Output directory for results
+--samples        Maximum number of samples to process
+--batch-size     Processing batch size
+--auto-download  Enable FaceForensics++ auto-download
 ```
 
-### `train.py`
-```bash
-python train.py [OPTIONS]
-  --dataset           Dataset name
-  --data-dir          Dataset path
-  --train-split       Training split ratio (default: 0.8)
-  --val-split         Validation split ratio (default: 0.1)
-  --num-samples       Max samples to use
-  --batch-size        Batch size for training
-  --epochs            Number of training epochs
-  --learning-rate     Learning rate for optimization
+`train.py`
+
+```
+--dataset --data-dir --train-split --val-split --num-samples
+--batch-size --epochs --learning-rate
 ```
 
-### `test_faceforensicspp.py`
-```bash
-python test_faceforensicspp.py [OPTIONS]
-  --data-dir          FF++ dataset path (auto-download if empty)
-  --dataset-ref       Kaggle dataset reference
-  --samples           Max samples to process
-  --split             Dataset split (train/test)
-  --output-dir        Output directory
+`test_faceforensicspp.py`
+
+```
+--data-dir --dataset-ref --samples --split --output-dir
 ```
 
 ---
 
-## 📊 Analysis Output
+## Testing
 
-### Generated Reports
-The framework automatically generates:
-
-1. **Feature Analysis Reports** (`*_analysis_report_*.md`)
-   - Feature statistics and distributions
-   - Correlation analysis
-   - Feature importance rankings
-   - Dataset characteristics
-
-2. **Cross-Dataset Evaluation** (`cross_dataset_*.md`)
-   - Model transfer learning results
-   - Performance metrics across datasets
-   - Feature effectiveness comparison
-
-3. **Benchmark Results** (`*_benchmark_*.md`)
-   - Noise robustness analysis
-   - Computational performance metrics
-   - Comparative feature evaluation
-
-### Generated Files
-- **Feature NPZ files**: `*_features_{type}.npz` (vectorized features)
-- **Combined features**: `*_features_all_enhanced.npz` (all features combined)
-- **Visualizations**: Plots for distribution analysis, ROC curves, etc.
-- **Models**: Trained LDA classifiers and metadata
-
----
-
-## 🧪 Testing
-
-### Run Integration Tests
 ```bash
 cd feature_benchmark
-python test_integration.py
-```
-
-Validates:
-- ✅ Module imports and dependencies
-- ✅ Dataset loading for both CIFAKE and FaceForensics++
-- ✅ Feature extraction functionality
-- ✅ Analyzer initialization and parameter handling
-- ✅ Report generation
-
-### Test FaceForensics++ Integration
-```bash
+python test_integration.py                      # module, dataset, extraction, reporting checks
 python test_faceforensicspp.py --samples 100 --split test
 ```
 
----
-
-## 🎨 Interactive Web UI
-
-The Streamlit-based UI provides:
-
-- **Dataset Management**: Upload and visualize datasets
-- **Feature Exploration**: Interactive feature statistics and distributions
-- **Model Evaluation**: Real-time classification and confidence scores
-- **Cross-Dataset Analysis**: Compare model performance across datasets
-- **Visualization Dashboard**: Charts, ROC curves, and confusion matrices
-
-**Launch:**
-```bash
-cd UI/deepfake_thesis_app
-streamlit run app.py
-```
-
-Access at: `http://localhost:8501`
+The integration suite validates module imports, dataset loading for both
+sources, feature extraction, analyzer initialisation, and report generation.
 
 ---
 
-## 📈 Research Questions
+## Results
 
-This thesis investigates:
+See [`RESULTS.md`](RESULTS.md) for the full report. In summary:
 
-1. **Feature Effectiveness**: How well do handcrafted features distinguish real from fake/synthetic images?
-2. **Dataset Characteristics**: What are the inherent differences between CIFAKE and FaceForensics++ datasets?
-3. **Model Transfer**: Do models trained on one dataset generalize to another?
-4. **Feature Importance**: Which feature categories are most discriminative?
-5. **Scalability**: How do various feature extraction methods scale with dataset size?
-6. **Robustness**: How robust are features to image compression and quality variations?
-
----
-
-## 🔍 Key Findings (Preliminary)
-
-Based on initial analysis:
-
-- **Texture & Noise Features**: Most discriminative for deepfake detection
-- **DCT Features**: Effective for detecting compression artifacts
-- **FFT Features**: Useful for frequency-domain anomaly detection
-- **Color Features**: Less discriminative but complementary information
-- **Dataset-Specific Effects**: Models show transfer limitations across datasets
-- **Feature Combinations**: Enhanced feature sets improve classification performance
+- **In-domain (CIFAKE):** noise + texture logistic regression reaches **87.1%
+  accuracy** and **0.943 ROC-AUC** over 120,000 samples, with no measurable
+  overfitting and sub-second training.
+- **In-domain (FaceForensics++):** the best single feature family (colour)
+  reaches **62.2%** LDA accuracy — manipulated face video is markedly harder than
+  fully synthetic imagery.
+- **Cross-dataset transfer:** a CIFAKE-trained detector applied to
+  FaceForensics++ performs at **chance** (ROC-AUC 0.52, MCC 0.00), revealing
+  dataset-specific rather than universal generative signatures.
 
 ---
 
-## ⚙️ Configuration
+## System Requirements
 
-### Environment Variables
-```bash
-# Enable verbose logging
-export DEEPFAKE_DEBUG=1
-
-# Specify Kaggle config location
-export KAGGLE_CONFIG_DIR=~/.kaggle
-```
-
-### System Requirements
-- **Memory**: 4GB minimum (16GB recommended for large datasets)
-- **Storage**: 50GB+ (for CIFAKE + FaceForensics++)
-- **GPU** (optional): CUDA 11.0+ for accelerated processing
+- **Memory:** 4 GB minimum, 16 GB recommended for large datasets.
+- **Storage:** ≥ 50 GB for CIFAKE and FaceForensics++ combined.
+- **GPU (optional):** CUDA 11.0+ for accelerated processing.
 
 ---
 
-## 🤝 Dependencies
+## Dependencies
 
-See requirements files in respective subdirectories:
-- `feature_benchmark/`: Core ML and image processing libraries
-- `UI/deepfake_thesis_app/`: Web UI dependencies
-
-Key packages:
-- **PyTorch**: Deep learning framework
-- **TorchVision**: Computer vision utilities
-- **scikit-learn**: Machine learning algorithms
-- **scikit-image**: Image processing
-- **NumPy, SciPy**: Numerical computing
-- **OpenCV**: Image I/O and processing
-- **Matplotlib**: Visualization
-- **Streamlit**: Web UI framework
-- **KaggleHub**: Dataset management
+PyTorch, TorchVision, scikit-learn, scikit-image, NumPy, SciPy, OpenCV,
+Matplotlib, Streamlit, and KaggleHub. See the `requirements.txt` files in
+`feature_benchmark/` and `UI/deepfake_thesis_app/`.
 
 ---
 
-## 📚 References
+## References
 
-- **FaceForensics++ Dataset**: [Li et al., 2020](https://arxiv.org/abs/2001.08971)
-- **CIFAKE Dataset**: [Novoselov et al., 2021](https://arxiv.org/abs/2102.08151)
-- **Deepfake Detection Surveys**: Recent literature on media forensics
+- Rössler et al., *FaceForensics++: Learning to Detect Manipulated Facial Images*, 2019.
+- Bird and Lotfi, *CIFAKE: Image Classification and Explainable Identification of AI-Generated Synthetic Images*, 2023.
+- Surveys on media forensics and deepfake detection.
 
----
-
-## 📝 License & Attribution
-
-This project uses publicly available datasets and open-source libraries. Ensure compliance with dataset licenses when publishing results.
+> Dataset citations above are indicative; verify exact authorship and years
+> against the original publications before submission.
 
 ---
 
-## 🔄 Version History
+## Licence and Attribution
 
-- **v1.0.0** (Current): Multi-dataset support, enhanced features, cross-dataset evaluation
-- **Earlier**: Single-dataset CIFAKE analysis, basic feature extraction
-
----
-
-## 📞 Notes
-
-- **Auto-download**: KaggleHub requires Kaggle API authentication for FaceForensics++
-- **Reproducibility**: Use fixed random seeds for consistent results
-- **Scaling**: Feature extraction parallelization available for large datasets
-- **Output**: All analysis artifacts are reproducible and timestamped
+This project uses publicly available datasets and open-source libraries. Ensure
+compliance with the respective dataset licences when publishing results.
 
 ---
 
-## 🎓 Thesis Objectives
+## Notes
 
-This work contributes to understanding:
-- Traditional ML approaches to deepfake detection
-- Generalization across deepfake datasets
-- Feature-based detection as complementary to deep learning
-- Practical deployment considerations for forensics analysis
-
----
-
-**For questions or issues, refer to individual module docstrings and script documentation.**
+- All analysis artifacts are timestamped and reproducible.
+- Fixed random seeds are used for repeatability.
+- Feature extraction supports parallelisation for large datasets.
+- FaceForensics++ auto-download requires Kaggle API authentication.
