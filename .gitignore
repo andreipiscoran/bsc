@@ -145,10 +145,6 @@ dmypy.json
 # Analysis reports (can be regenerated)
 */analysis/
 */reports/
-*_analysis_report_*.md
-cross_dataset_*.md
-noise_linear_benchmark_*.md
-*_benchmark_*.md
 
 # Process IDs and temporary files
 *.pid

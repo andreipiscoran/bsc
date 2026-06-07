@@ -1,0 +1,1 @@
+{ printf '\n100000\n'; } | nohup python main.py > run_100000.log 2>&1 & echo $! | tee run_100000.pid
